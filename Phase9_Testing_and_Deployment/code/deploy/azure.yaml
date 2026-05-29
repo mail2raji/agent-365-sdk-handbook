@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: agent365-sample
+metadata:
+  template: agent365-sample@1.0.0
+services:
+  agent:
+    project: .
+    language: py
+    host: containerapp
+    docker:
+      path: ./deploy/Dockerfile
+infra:
+  provider: bicep
+  path: ./deploy
+  module: main

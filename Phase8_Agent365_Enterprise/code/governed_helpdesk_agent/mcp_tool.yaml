@@ -1,0 +1,14 @@
+name: ticket-lookup
+description: Look up an IT support ticket by ID. Returns status, priority, and assignee.
+endpoint: https://mcp.contoso.com/ticket-lookup
+schema:
+  type: object
+  properties:
+    ticket_id:
+      type: string
+      description: The ticket ID, e.g. INC1234.
+  required:
+    - ticket_id
+scopes:
+  - tickets.read
+owner: helpdesk@contoso.com

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.20/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.20",
+  "version": "1.0.0",
+  "id": "{{AGENT_BLUEPRINT_ID}}",
+  "developer": {
+    "name": "Your Name",
+    "websiteUrl": "https://github.com/your-handle",
+    "privacyUrl": "https://github.com/your-handle/your-repo#privacy",
+    "termsOfUseUrl": "https://github.com/your-handle/your-repo#terms"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "My First A365 Agent",
+    "full": "My First Agent 365 Hello-World Agent"
+  },
+  "description": {
+    "short": "My first end-to-end Agent 365 lab agent.",
+    "full": "A minimal echo agent built for Phase 11 of the Agent 365 SDK Learning curriculum. Demonstrates a complete wrap of the M365 Agents SDK with the Agent 365 enterprise layer (identity, lifecycle, observability, Defender XDR visibility)."
+  },
+  "accentColor": "#5b53ff",
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "{{WEB_APP_DOMAIN}}"
+  ],
+  "agenticUserTemplates": [
+    {
+      "id": "{{AGENT_IDENTITY_TEMPLATE_ID}}",
+      "displayName": "My First A365 Agent",
+      "description": "Echoes whatever you type. Used for the Phase 11 lab.",
+      "version": "1.0.0",
+      "agentType": "ai-teammate",
+      "configuration": {
+        "messagingEndpoint": "{{MESSAGING_ENDPOINT}}",
+        "authMode": "user-delegated"
+      }
+    }
+  ]
+}

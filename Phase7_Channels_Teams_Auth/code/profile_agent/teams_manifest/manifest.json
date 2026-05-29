@@ -1,0 +1,29 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "REPLACE-WITH-GUID",
+  "developer": {
+    "name": "Contoso",
+    "websiteUrl": "https://contoso.com",
+    "privacyUrl": "https://contoso.com/privacy",
+    "termsOfUseUrl": "https://contoso.com/terms"
+  },
+  "name": { "short": "Profile Bot", "full": "Profile Bot" },
+  "description": {
+    "short": "Greets you and shows your mailbox folders.",
+    "full": "Demo bot for Phase 7 of the Agent 365 SDK curriculum."
+  },
+  "icons": { "color": "color.png", "outline": "outline.png" },
+  "accentColor": "#5b53ff",
+  "bots": [
+    {
+      "botId": "REPLACE-WITH-AZURE-BOT-APP-ID",
+      "scopes": ["personal", "team", "groupchat"],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["token.botframework.com"]
+}
