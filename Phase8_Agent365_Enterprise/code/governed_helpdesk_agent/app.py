@@ -5,6 +5,16 @@ Demonstrates layering A365 identity + governed MCP + OTel on top of the foundati
 A365 imports are wrapped in try/except so the file loads even without the
 pre-release packages. When a piece is missing, the agent degrades to local-only
 behavior (still useful as a learning exercise).
+
+KID-FRIENDLY VERSION:
+    This is the Phase 6 agent + 3 enterprise upgrades:
+      1. IDENTITY — the agent has its OWN badge (not a shared Bot secret).
+      2. MCP TOOLSET — tools come from a CENTRAL catalog admins control,
+         not hard-coded in our repo.
+      3. OTEL — every chat turn writes a trace, so we can see WHO did WHAT
+         in Azure Monitor.
+    All three are OPTIONAL: if the A365 packages aren't installed, the file
+    still runs with local-only fallbacks.
 """
 from __future__ import annotations
 
@@ -31,23 +41,27 @@ log = logging.getLogger("governed-helpdesk")
 
 
 # ---------- A365 identity ----------
+# Try to load the agent's IDENTITY (its enterprise badge).
+# If the A365 package isn't installed, IDENTITY stays None and the agent
+# falls back to the shared Bot Framework credentials (Phase 7 style).
 IDENTITY = None
 try:
     from microsoft_agents_a365.identity import AgentIdentity  # type: ignore
 
-    IDENTITY = AgentIdentity.from_env()
+    IDENTITY = AgentIdentity.from_env()        # reads A365_IDENTITY_* env vars
     log.info("A365 identity loaded: %s", IDENTITY)
 except Exception as e:  # noqa: BLE001
     log.warning("A365 identity unavailable, using foundation only: %s", e)
 
 
 # ---------- A365 OTel observability ----------
+# Wire up traces → OTLP → App Insights. Optional.
 try:
     from microsoft_agents_a365.observability.otlp import configure_otel  # type: ignore
 
     if os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
         configure_otel(
-            service_name="helpdesk-agent",
+            service_name="helpdesk-agent",                                # appears in App Insights
             endpoint=os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"],
         )
         log.info("OTel exporter configured.")
@@ -56,6 +70,9 @@ except Exception as e:  # noqa: BLE001
 
 
 # ---------- A365 MCP toolset ----------
+# MCP = Model Context Protocol. The TOOLSET is a list of tools an admin
+# has approved in the tenant catalog. We don't build it here — we just
+# remember that it's available and load it on first use.
 TOOLSET = None
 try:
     from microsoft_agents_a365.mcp import McpToolset  # type: ignore
@@ -66,7 +83,7 @@ except Exception as e:  # noqa: BLE001
     log.warning("A365 MCP not available: %s", e)
 
 
-# Fallback local tools (so the agent still works without governed MCP)
+# Fallback local tools (so the agent still works without governed MCP).
 LOCAL_TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
@@ -84,6 +101,7 @@ LOCAL_TOOLS: list[dict[str, Any]] = [
 
 
 async def call_local_tool(name: str, args: dict) -> str:
+    # Fake ticket lookup so the demo still works without a real MCP server.
     if name == "lookup_ticket":
         return f"Ticket {args['ticket_id']}: Open. Priority P2. Assigned to Helpdesk-L2."
     return f"Unknown tool {name}"
@@ -108,6 +126,8 @@ async def _get_toolset_and_tools():
     """Resolve the active toolset + tool schemas.
 
     Prefers governed MCP if available. Falls back to LOCAL_TOOLS.
+    Like checking the school CABINET first — if locked, use crayons from
+    your own pencil case.
     """
     global TOOLSET
     if IDENTITY is not None:
@@ -115,7 +135,9 @@ async def _get_toolset_and_tools():
             from microsoft_agents_a365.mcp import McpToolset  # type: ignore
 
             if TOOLSET is None:
+                # Ask the central catalog for the tools this identity can use.
                 TOOLSET = await McpToolset.from_catalog(IDENTITY)
+            # `openai_tools()` returns the SAME schema shape the LLM expects.
             return TOOLSET, TOOLSET.openai_tools()
         except Exception as e:  # noqa: BLE001
             log.warning("Falling back to local tools: %s", e)
@@ -125,6 +147,7 @@ async def _get_toolset_and_tools():
 async def chat_with_tools(history: list[dict], user_msg: str) -> str:
     history.append({"role": "user", "content": user_msg})
     toolset, tools = await _get_toolset_and_tools()
+    # Same tool-loop pattern as Phase 6 (max 5 rounds, safety cap).
     for _ in range(5):
         resp = await _client().chat.completions.create(
             model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
@@ -143,19 +166,25 @@ async def chat_with_tools(history: list[dict], user_msg: str) -> str:
             name = call.function.name
             log.info(f"tool: {name}({args})")
             if toolset is not None:
+                # Governed path: MCP toolset runs the call (logged + auditable).
                 result = await toolset.invoke(name, args)
             else:
+                # Fallback path: local function.
                 result = await call_local_tool(name, args)
             history.append(
                 {
                     "role": "tool",
                     "tool_call_id": call.id,
+                    # If the tool returned a dict, dump to JSON string — the LLM
+                    # expects tool output as text.
                     "content": json.dumps(result) if not isinstance(result, str) else result,
                 }
             )
     return "Sorry, I'm stuck. Please open a ticket."
 
 
+# Pass `identity=IDENTITY` so the SDK tags every outbound activity with the
+# agent's enterprise identity (or falls back to Bot creds if IDENTITY is None).
 AGENT_APP = AgentApplication(storage=MemoryStorage(), identity=IDENTITY)
 
 
