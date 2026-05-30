@@ -218,6 +218,8 @@ Terminal 1 should print:
 
 The first message (joke) doesn't call any tool — the model just chats.
 
+**What just happened?** The model **read your tool schema** and decided **on its own** when `get_weather` was needed. You didn't write any if/else — the LLM is the router now. That's a huge mental shift from Phase 2.
+
 ### ✅ Checkpoint 1
 The model autonomously decides when to call `get_weather` and the result appears in the reply.
 
@@ -226,6 +228,8 @@ Stop the agent.
 ---
 
 ## Lab 2 — Add the second tool (`reset_password`) (~10 min)
+
+**You will:** add a second tool and watch the LLM pick the right one automatically based on what the user asks.
 
 ### Step 2.1 — Extend `tools_v1.py` into `tools_v2.py`
 
@@ -282,6 +286,8 @@ Terminal 1:
 ```
 
 The reply confirms the temp password was emailed.
+
+**What just happened?** With **two** tools registered, the model now has to *choose*. It uses the `description` field on each schema to decide — which is why writing good descriptions is the #1 RAG/tool-use skill.
 
 ### ✅ Checkpoint 2
 Two tools available. The LLM picks the right one per message.
@@ -433,12 +439,16 @@ You should see:
 
 The password doc is the top hit. 🎉
 
+**What just happened?** You built **RAG from scratch in 50 lines**: split docs → embed → store vectors → cosine-similarity search. No magic library, just NumPy + the embedding API. In production you'd swap NumPy for Azure AI Search, but the recipe is the same.
+
 ### ✅ Checkpoint 3
 RAG retrieves the most relevant chunk for the question.
 
 ---
 
 ## Lab 4 — Wire RAG as a third tool (~15 min)
+
+**You will:** expose your RAG store as a tool the LLM can call (`lookup_policy`) so policy questions get routed to your docs automatically.
 
 ### Step 4.1 — Extend tools
 
@@ -514,9 +524,13 @@ python app_v1.py
 
 You should see `[RAG] indexed 3 chunks from ./docs` before the server starts.
 
+**What just happened?** RAG is now a **tool** like any other. The LLM doesn't know (or care) that `lookup_policy` happens to use embeddings under the hood — from its point of view, it's just "the function for policy questions".
+
 ---
 
 ## Lab 5 — End-to-end test (~10 min)
+
+**You will:** prove the LLM correctly picks **the right tool** out of three for four very different messages.
 
 ```powershell
 Send-Msg "What is our password rotation policy?"           # → lookup_policy
@@ -534,6 +548,8 @@ Terminal 1 should show:
 ```
 
 And no `[TOOL CALL]` for the octopus question.
+
+**What just happened?** Four messages, three tool picks, zero hand-written routing. This is what "agent" really means — an LLM that calls the right function at the right time, all from the descriptions you wrote.
 
 ### ✅ Checkpoint 5
 All three tools fire when appropriate, and the LLM chats freely when no tool is needed.

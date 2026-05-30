@@ -48,6 +48,8 @@ Lab 5 → Send your first governed notification
 
 ## Lab 1 — Install A365 packages (~15 min)
 
+**You will:** install the Agent 365 preview packages and confirm the `a365` CLI works.
+
 ### Step 1.1 — Confirm uv
 
 ```powershell
@@ -85,6 +87,8 @@ a365 --help
 ```
 
 Should print the CLI help.
+
+**What just happened?** You added the Agent 365 "enterprise wrap" packages to your venv. From now on, your agent can use identity, MCP, notifications, and observability — each is just `pip install + import`.
 
 ### ✅ Checkpoint 1
 At least one A365 package is installed and `a365 --help` runs.
@@ -191,6 +195,8 @@ You should see spans like:
 
 Also try → **Application map**: a visual graph of agent → OpenAI → external HTTP.
 
+**What just happened?** With **one import** + **one function call**, every HTTP request and OpenAI call your agent makes is now visible in Azure dashboards. No print statements, no manual logging. This is the foundation of operating an agent in production.
+
 ### ✅ Checkpoint 2
 Three messages = three traces, each showing the LLM call as a child span.
 
@@ -199,6 +205,8 @@ Stop the agent.
 ---
 
 ## Lab 3 — Provision an Agent 365 identity (~20 min)
+
+**You will:** create a real **agent identity** (not a Bot secret) so the agent acts as itself, with scoped permissions, like any other enterprise app.
 
 > ❗ Tenant admin permissions required to create A365 identities. If you don't have them, **read through** and skip the actual command — the rest of the labs still work without an A365 identity (the SDK falls back to the Phase 7 Bot identity).
 
@@ -246,6 +254,8 @@ python app_v1.py
 ```
 
 In the App Insights logs (`union traces, dependencies | where timestamp > ago(5m)`) you should see the identity client id attached as an attribute on each span.
+
+**What just happened?** The agent now has its **own** identity — not a shared Bot secret. In an audit you can say "this trace was the Knowledge Agent, scope: tickets.read, owner: alice". That's the difference between a hobby bot and an enterprise agent.
 
 ### ✅ Checkpoint 3
 `a365 identity list` shows your new identity, and spans show `agent.identity` attribute.
@@ -349,6 +359,8 @@ If the MCP server is reachable and approved, you'll see:
 
 And the LLM weaves the answer into the reply.
 
+**What just happened?** Your tools are no longer hard-coded in Python — they live in a **central catalog** an admin curates. Add a new approved tool, and every wrapped agent picks it up at next start. This is how you scale to dozens of agents without copy-paste.
+
 ### ✅ Checkpoint 4
 The agent discovers governed tools at startup and the LLM uses them alongside local tools.
 
@@ -420,6 +432,8 @@ python send_test_notification.py
 ```
 
 Check your **Teams Activity feed** or **chat with the agent** — the card should arrive.
+
+**What just happened?** A **proactive** notification = the agent talks **first**, instead of waiting for the user. Combined with templates (registered & approved by admin) you get a governed channel for things like daily summaries, alerts, or reminders.
 
 ### ✅ Checkpoint 5
 The notification card appears in Teams for the target user.

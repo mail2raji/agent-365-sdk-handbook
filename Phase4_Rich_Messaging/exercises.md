@@ -90,6 +90,8 @@ The **right pane** shows the JSON. It starts with:
 
 Every `Input.*` needs an `id` — that's the **key** the form data will arrive under when the user submits.
 
+**What just happened?** You learned that an Adaptive Card is just a recipe (`body` + `actions`) in JSON. Once you know the 7 elements, you can build any form a manager could ever ask for — surveys, approvals, tickets — without writing a single line of UI code.
+
 ### ✅ Checkpoint 1
 You've seen the designer, you understand a card is just JSON with `body` + `actions`, and you know the 7 elements.
 
@@ -201,6 +203,8 @@ async def send_card(context: TurnContext, state: TurnState):
 Restart, send `card` again — you'll see the JSON in terminal 1.
 
 > 💡 **Tip:** copy the JSON back into <https://adaptivecards.io/designer/> ("New card → paste your JSON") to *see* what your card looks like rendered. This is the fastest design loop.
+
+**What just happened?** You established the **print + designer loop**: print the JSON your code emits, paste it into the visual designer, and you can see *exactly* what the user sees — without setting up Teams. Use this loop every time you build a new card.
 
 ### ✅ Checkpoint 2
 The agent accepts `card`, prints a JSON card, and doesn't error. You can paste that JSON into the designer to preview it.
@@ -384,12 +388,16 @@ Terminal 1 should print:
 
 🎉 You've successfully received form data.
 
+**What just happened?** You closed the **round trip**: agent shows form → user fills it → channel posts back as a `message` with `activity.value` — the SDK turns it into a Python dict. From there it's just normal Python: validate, save, reply.
+
 ### ✅ Checkpoint 3
 Sending the fake submission prints the values in terminal 1 and the agent saves the request in state.
 
 ---
 
 ## Lab 4 — Show the confirmation card (~10 min)
+
+**You will:** verify the receipt card the agent already returns after every submission, and visually confirm it renders cleanly.
 
 The code above already sends a confirmation card. Let's verify it works.
 
@@ -414,6 +422,8 @@ The response includes two outgoing activities: the confirmation **card** and a t
 ### Step 4.2 — Visually verify in the designer
 
 Grab the printed `OUTGOING CARD` JSON from terminal 1 (you can add a `print` to `build_confirmation` if you want), paste into <https://adaptivecards.io/designer/> "Open file → paste JSON". You'll see the rendered card.
+
+**What just happened?** Every submission now produces a unique `LR-...` id and a printable receipt. That id can later be passed to a ticketing system, Outlook email, or downstream API — cards become your front door to **any** business process.
 
 ### ✅ Checkpoint 4
 Two submissions produce two unique `LR-…` ids, and the confirmation card structure is well-formed (no designer warnings).
@@ -474,6 +484,8 @@ You should get back:
 - **LR-XXXXXX**: Wedding (2026-07-10 → 2026-07-15, vacation)
 - **LR-YYYYYY**: Doctor (2026-08-01 → 2026-08-01, sick)
 ```
+
+**What just happened?** Combining Phase 3's state with Phase 4's cards = a real micro-app: users submit data with a form, the agent persists it, and they can browse history. Every internal tool you'll ever build is essentially this same loop — just with prettier cards.
 
 ### ✅ Checkpoint 5
 Listing returns the same number of requests you submitted.

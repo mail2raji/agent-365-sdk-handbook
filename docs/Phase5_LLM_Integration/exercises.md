@@ -159,6 +159,8 @@ Reply: Hi there! How are you?
 ### ✅ Checkpoint 1
 `smoke_test.py` prints a real reply from the LLM.
 
+**What just happened?** You proved the LLM is reachable **outside** the agent. From now on, if something breaks, you'll know whether it's the LLM (rerun this 10-line script) or your agent code — a debugging superpower.
+
 ---
 
 ## Lab 2 — Simple agent (no history, no streaming) (~15 min)
@@ -235,6 +237,8 @@ Send-Msg "And what about Germany?"
 ```
 
 You'll see the response logged in terminal 1 — but notice the **second** question got an answer that didn't know "France" was the previous topic. That's because we sent **no history**. Let's fix that.
+
+**What just happened?** The LLM has **no memory of its own** — every call is a blank slate. Whatever "memory" your chatbot appears to have, you (the developer) have to feed it back in by including the chat history with each request.
 
 ### ✅ Checkpoint 2
 Agent answers both questions, but the second one shows no memory.
@@ -343,6 +347,8 @@ Send-Msg "What was my first question?"      # should mention France
 
 🎉 Now the third message proves the agent remembers the conversation.
 
+**What just happened?** You added a **system prompt** (the personality), a **history list** (Phase 3 state), and a **trim** to the last 20 messages so the bill stays small. That's literally 80 % of "making a chatbot feel smart" — long-term memory comes later.
+
 ### ✅ Checkpoint 3
 Buddy remembers prior turns. The third question correctly says "you first asked about France."
 
@@ -420,6 +426,8 @@ Send-Msg "Explain gravity in 3 sentences."
 
 In terminal 1 you'll see the reply being printed letter-by-letter — that's the stream.
 
+**What just happened?** Streaming = the LLM hands you words as they come out, instead of holding them all till the end. The user sees "typing" instantly = a 5× better feeling, even if the total time is the same.
+
 ### ✅ Checkpoint 4
 You see the reply arriving piece by piece in terminal 1.
 
@@ -428,6 +436,8 @@ Stop the agent.
 ---
 
 ## Lab 5 — Reset command + welcome (~10 min)
+
+**You will:** add a friendly greeting when someone joins the chat and a `reset` command to wipe the history so Buddy starts fresh.
 
 ### Step 5.1 — Add `reset` and `welcome` to `app_v3.py`
 
@@ -461,6 +471,8 @@ Send-Msg "What was my first question?"     # Buddy says: France
 Send-Msg "reset"
 Send-Msg "What was my first question?"     # Buddy says: I don't remember anything
 ```
+
+**What just happened?** `reset` is a one-liner that empties `state.conversation["history"]`. Tiny commands like this matter — they give the user an escape hatch when the bot goes off the rails.
 
 ### ✅ Checkpoint 5
 After `reset`, Buddy no longer remembers prior turns.
@@ -530,6 +542,8 @@ You should see:
 ```
 
 🎉 You just tested the LLM logic without spending a cent on tokens.
+
+**What just happened?** You **mocked** the OpenAI client — the test thinks it called the real API but never left your laptop. This pattern is the entire foundation of LLM CI/CD: fast, free, deterministic tests that run on every commit.
 
 ### ✅ Checkpoint 6
 The test passes without any network call.

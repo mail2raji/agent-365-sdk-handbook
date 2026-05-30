@@ -154,6 +154,8 @@ python app_v1.py
 Send-Msg "cart"        # 🐛 empty — the cart didn't survive restart
 ```
 
+**What just happened?** You proved that plain Python variables are like a goldfish — they remember nothing for long. Two big problems showed up: (1) everyone shares the same brain, (2) the brain resets every time the agent restarts. The whole point of "state" is to fix both bugs.
+
 ### ✅ Checkpoint 1
 You've seen **two bugs** of using plain variables: (a) all users share one cart, (b) restart wipes everything.
 
@@ -247,6 +249,8 @@ Send-Msg "cart"       -User bob      # → only ['fish']
 
 > 🧠 **The save-after-modify rule:** `MemoryStorage` is forgiving — it saves automatically. **Persistent** backends (FileStorage, Blob, Cosmos) only save when `AgentApplication` decides the turn was clean. To be safe, call `await state.save(context)` after big changes, especially inside `try/except`.
 
+**What just happened?** You moved the cart from a shared global into `state.conversation` — a dict the SDK gives each conversation. Now every chat has its own private cart. Same code, but it works for thousands of users at once. This is the **first real win** from the M365 Agents SDK.
+
 ### ✅ Checkpoint 2
 Two users, two carts. No cross-contamination. Stop the agent (`Ctrl+C`).
 
@@ -326,6 +330,8 @@ Send-Msg "hi"      -User bob   -Conv chatA     # → Hello!  (default, not Alice
 
 🎉 Language is **user-scoped** — follows Alice across all her conversations, but doesn't leak to Bob.
 
+**What just happened?** You learned the **two scopes** rule: `state.conversation` is per-chat (the cart), `state.user` is per-person (the language). Pick the right one based on what should leak across chats and what shouldn't. Mixing them up is the #1 state bug in real agents.
+
 ### ✅ Checkpoint 3
 Alice gets `Hallo!` in any conversation; Bob gets `Hello!`. Stop the agent.
 
@@ -375,6 +381,8 @@ Edit `boom` and **uncomment** the `await state.save(context)` line so it runs *b
 Now the `💥` is definitely in the cart, because we saved before the raise.
 
 > 🧠 **Lesson:** for important state changes, call `await state.save(context)` immediately after modifying, so the data survives even if your code crashes.
+
+**What just happened?** You watched a crash and learned a fire-drill habit: when something **important** changes (a payment, a ticket, money), save **immediately** — don't trust the SDK to do it at the end of the turn. One missed save = one upset user.
 
 ### ✅ Checkpoint 4
 You've seen a controlled crash and understood why explicit `state.save()` is sometimes necessary.
@@ -491,6 +499,8 @@ AGENT_APP = AgentApplication(storage=SimpleFileStorage(folder="./state"))
 ```
 
 Re-run the same test as Step 5.3. Cart should survive a restart.
+
+**What just happened?** You swapped the **storage backend** (RAM → disk) without changing a single line of business logic. That's the magic of the `Storage` abstraction — in production you'd swap again to `BlobStorage` or `CosmosDbStorage` and your handlers wouldn't notice.
 
 ### ✅ Checkpoint 5
 Restart the agent — Alice's cart is still there.

@@ -45,6 +45,8 @@ Lab 5 → Add lifecycle handlers (membersRemoved & typing)
 
 ## Lab 1 — Open the helpdesk_router and decode it (~15 min)
 
+**You will:** read the 4-route helpdesk agent line-by-line so you can recite which keyword goes to which team — and why **order matters**.
+
 ### Step 1.1 — Move to the folder
 
 ```powershell
@@ -93,12 +95,16 @@ Read it piece by piece:
 
 So this matches `reset password`, `Locked Out`, `MFA`, `reset    password` (with extra spaces) — but not `password reset` (different word order).
 
+**What just happened?** You learned that an agent is just a **switchboard operator**. Every message comes in, and decorators tell the SDK "if it looks like this, ring *that* desk". The router itself is dumb — it just walks the handlers top-to-bottom and stops at the first match. Get the order wrong and the wrong desk picks up the phone.
+
 ### ✅ Checkpoint 1
 You can point at each of the 5 handlers and say what triggers it. You understand that **order matters** — catch-all must be last.
 
 ---
 
 ## Lab 2 — Run it and test all routes (~10 min)
+
+**You will:** start the router and prove all 4 desks (IT, HR, Finance, fallback) actually fire by sending one fake message per route.
 
 ### Step 2.1 — Start the agent
 
@@ -148,12 +154,16 @@ INFO:helpdesk:Routing to Finance
 
 The 4th message ("What's the weather?") hits the catch-all (no log line, but the user gets the menu back).
 
+**What just happened?** You proved that the `Send-Msg` helper + log lines = a tiny **regression test suite**. Whenever you change the router, re-run these 4 messages and you instantly see if anything broke. This is the cheap-and-cheerful version of the unit tests you'll write in Phase 9.
+
 ### ✅ Checkpoint 2
 Three INFO lines printed for the three matching messages. No INFO line for the fallback.
 
 ---
 
 ## Lab 3 — Break the routing order on purpose (~10 min)
+
+**You will:** intentionally move the catch-all to the top, watch every route break, then put it back — so the routing rule is burned into your memory forever.
 
 > 🎯 The goal of this lab is to feel — in your bones — why **order matters**.
 
@@ -200,6 +210,8 @@ Send-Msg "reset password"
 ```
 
 Now `Routing to IT` prints again. ✅
+
+**What just happened?** You broke the router on purpose, watched it fail in a predictable way, and fixed it — in less than 2 minutes. That's the **fastest debugging skill** in software: change one thing, see what breaks, change it back. Use this trick whenever you're not sure what a piece of code does.
 
 ### ✅ Checkpoint 3
 You've personally experienced the routing-order rule and put the agent back to a working state.
@@ -261,6 +273,8 @@ Send-Msg "trip to Spain please"                # → Default menu (no "book" key
 ```
 
 Verify the three matching ones print `Routing to Travel`.
+
+**What just happened?** You added a brand-new desk to the switchboard without touching any existing code — because the SDK pattern is **add a decorator, you're done**. This is how real agents grow: keep stacking specific routes above the catch-all menu.
 
 ### ✅ Checkpoint 4
 Travel works for the 3 expected phrases, and "trip to Spain please" falls through to the menu (as expected — the regex requires the word `book` or `travel request`).
@@ -334,6 +348,8 @@ Terminal 1 should show:
 ```text
 INFO:helpdesk:👋 Alice left the conversation.
 ```
+
+**What just happened?** You learned that **not every activity is a message**. Teams sends `typing` while someone is mid-sentence and `membersRemoved` when someone leaves a meeting. The same decorator pattern handles them — just point at the activity type or sub-event you care about.
 
 ### ✅ Checkpoint 5
 Both the `typing` and `membersRemoved` events show up in the logs.

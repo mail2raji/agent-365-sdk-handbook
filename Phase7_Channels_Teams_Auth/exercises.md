@@ -89,6 +89,8 @@ Copy it. From now on we'll call it **`<PUBLIC_URL>`**. Example: `https://abc-1-2
 
 In a browser, visit `<PUBLIC_URL>/api/messages`. You should get a `405 Method Not Allowed` (because that endpoint only accepts POST). That's good — it proves traffic reaches your laptop.
 
+**What just happened?** Teams (and the Bot Service) lives on the public internet — they can't reach your laptop directly. The dev tunnel is the **bridge**: it gives you a public HTTPS address that forwards every request right back to `localhost:3978`.
+
 ### ✅ Checkpoint 1
 You have a public HTTPS URL that forwards to `localhost:3978`.
 
@@ -136,6 +138,8 @@ Same **Configuration** page → **Messaging endpoint**: paste `<PUBLIC_URL>/api/
 ### Step 2.5 — Enable Teams channel
 
 In the Bot resource → **Channels** → click the **Microsoft Teams** icon → accept terms → **Apply**.
+
+**What just happened?** The Azure Bot is a **mailroom**. Teams (and Web Chat, and Slack …) drops messages off; the Bot service forwards them to your `/api/messages`. You never wrote any Teams-specific code — the SDK abstracts the channel.
 
 ### ✅ Checkpoint 2
 Bot is created, has an App ID + secret, messaging endpoint points to your dev tunnel, and Teams channel is enabled.
@@ -191,6 +195,8 @@ In `.env`:
 ```dotenv
 OAUTH_CONNECTION_NAME=graph-sso
 ```
+
+**What just happened?** Single Sign-On = the user signs in **once**, and your agent gets a Microsoft Graph token *as that user*. You never see their password — the Bot service holds the token for you. This is the gold standard for enterprise apps.
 
 ### ✅ Checkpoint 3
 "Test connection" returned a token (not a red error).
@@ -291,12 +297,16 @@ In Teams → **Apps** (left sidebar) → **Manage your apps** → **Upload an ap
 
 If "Upload a custom app" is missing, your tenant disables custom app upload — ask your admin or use a developer tenant.
 
+**What just happened?** The Teams manifest is just a **3-file zip** (manifest + 2 icons). Teams uses it to know what to show in the app catalog and which Bot ID owns the chat. Tiny file, big effect.
+
 ### ✅ Checkpoint 4
 Teams now lists "Profile Bot" under your apps. **Don't start chatting yet** — we need to add the code first.
 
 ---
 
 ## Lab 5 — Code the agent (~25 min)
+
+**You will:** write the agent code that wires SSO into a friendly chat: `login` shows the sign-in card, `me` calls Microsoft Graph, `folders` lists the user's mailbox folders.
 
 ### Step 5.1 — Create `app.py`
 
@@ -424,6 +434,8 @@ Open Teams → **Profile Bot** → start a chat → type:
 | `me` | "You are **<Your Name>** (<your email>)." |
 | `folders` | List of mailbox folders. |
 | `logout` | "👋 Signed out." |
+
+**What just happened?** You went from "echo bot" to **enterprise agent**: signed-in users, real Microsoft Graph data, all inside Teams. The agent never saw a password. Every Microsoft 365 production agent uses this exact recipe.
 
 ### ✅ Checkpoint 5
 You signed in inside Teams and Graph returned your real name and folders. 🎉

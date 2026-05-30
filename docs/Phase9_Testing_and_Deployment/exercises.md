@@ -47,6 +47,8 @@ Lab 6 → Production checklist
 
 ## Lab 1 — Unit tests with TestAdapter (~30 min)
 
+**You will:** write fast, offline tests using the SDK's `TestAdapter` so you can verify behaviour without hitting any LLM or network.
+
 ### Step 1.1 — Setup
 
 ```powershell
@@ -167,6 +169,8 @@ pytest -q tests
 
 Should see `4 passed`.
 
+**What just happened?** Four tests, four seconds, zero dollars. `TestAdapter` lets you push activities through the agent **in memory**, so you can prove handlers work without any LLM or HTTP. Run this in CI and broken handlers will never reach production.
+
 ### ✅ Checkpoint 1
 All tests pass, no network calls.
 
@@ -208,12 +212,16 @@ What's the weather in Tokyo?
 
 You should get a reply. Open the **Inspector** pane on the right — every activity is shown as JSON. You can see the LLM's tool calls coming through.
 
+**What just happened?** The Bot Framework Emulator is a **real chat UI** that speaks the same protocol as Teams. The Inspector shows every activity going in/out as JSON — priceless when debugging cards or tool calls.
+
 ### ✅ Checkpoint 2
 You can chat with the agent through the Emulator and inspect activity JSON.
 
 ---
 
 ## Lab 3 — Dockerize (~25 min)
+
+**You will:** wrap your agent in a Docker image so it can run on **any** cloud, the same way it runs on your laptop.
 
 ### Step 3.1 — Create `Dockerfile`
 
@@ -302,12 +310,16 @@ Invoke-RestMethod -Uri http://localhost:3978/api/messages -Method POST -ContentT
 
 Should respond OK. Stop the container with `Ctrl+C`.
 
+**What just happened?** Your agent now lives in a **portable box** (the Docker image). Anywhere Docker runs — your laptop, Azure, AWS, Kubernetes — the agent runs the same way. Zero "works on my machine" problems.
+
 ### ✅ Checkpoint 3
 `docker build` succeeds and `docker run` serves traffic on port 3978.
 
 ---
 
 ## Lab 4 — Deploy to Azure Container Apps with `azd` (~45 min)
+
+**You will:** push that Docker image to Azure with one command (`azd up`) and watch the live logs streaming back.
 
 ### Step 4.1 — Create the Bicep files
 
@@ -484,12 +496,16 @@ az containerapp logs show -n agentlab-app -g rg-knowledge-agent-lab-dev --follow
 
 (Resource group name = `rg-<envname>-<envname>`; check `azd env get-values`.)
 
+**What just happened?** One command (`azd up`) created **all** Azure resources from a Bicep template, built and pushed your image, and updated the Container App. Your agent now has a public HTTPS URL anyone in the world can reach. That's a production deployment.
+
 ### ✅ Checkpoint 4
 The Container App responds at its public FQDN; logs stream live.
 
 ---
 
 ## Lab 5 — KQL queries (~15 min)
+
+**You will:** write 4 Kusto queries so you can monitor errors, traffic, latency, and OpenAI spend on the live agent.
 
 In Azure portal → your **Application Insights** → **Logs**.
 
@@ -533,12 +549,16 @@ dependencies
 | take 50
 ```
 
+**What just happened?** Four queries cover the **golden signals**: errors, traffic, latency, and dependencies. Save them as Workbooks in App Insights and you've got an instant operations dashboard.
+
 ### ✅ Checkpoint 5
 At least one query returns data (the agent has been hit enough times).
 
 ---
 
 ## Lab 6 — Production checklist (~5 min)
+
+**You will:** walk a 9-item checklist that separates a demo agent from one you'd let real users hit.
 
 Tick before you call any agent "production-ready":
 

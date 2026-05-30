@@ -113,6 +113,8 @@ if __name__ == "__main__":
 
 > 🧠 The `@…` lines are called **decorators**. Read them as: "the next function is a handler — please call it when *this* happens."
 
+**What just happened?** You read the entire agent in 20 lines. It's literally a tiny web server + a brain + two helpers (one for hello, one for messages). Everything else in this curriculum is built on top of these 4 imports — so don't panic when later phases look bigger, the core is always this small.
+
 ### ✅ Checkpoint 1
 You can point to (a) the brain (`AgentApplication`), (b) the welcome handler, (c) the message handler, and (d) the line that starts the server.
 
@@ -154,6 +156,8 @@ On macOS/Linux instead:
 ```bash
 nc -zv localhost 3978
 ```
+
+**What just happened?** Your laptop is now a chat server. Port 3978 is the "front door" — anyone who knows the address can knock. In the next lab we'll be the visitor knocking from terminal 2.
 
 ### ✅ Checkpoint 2
 Terminal 1 shows `Running on http://localhost:3978`. Terminal 2 confirms port 3978 is open.
@@ -228,6 +232,8 @@ In terminal 1 you should see:
 ```text
 [RECEIVED] hello agent
 ```
+
+**What just happened?** You faked a Teams message using PowerShell. The agent didn't know (or care) you weren't real Teams — it just saw JSON arrive at `/api/messages`. This trick is **gold** for debugging: you can replay any bug with a saved JSON snippet instead of clicking through Teams every time.
 
 ### ✅ Checkpoint 3
 Terminal 1 prints `[RECEIVED] hello agent` whenever you send a message from terminal 2.
@@ -354,6 +360,8 @@ Invoke-RestMethod -Uri http://localhost:3978/api/messages -Method POST -ContentT
 ```
 
 (Note: `/help` and `clear` don't increment the counter because they are caught by their own specific handlers and `return` before the catch-all.)
+
+**What just happened?** You learned the **most important rule** of agent handlers: **specific beats general**. Exact-text handlers (`/help`, `clear`) win over the catch-all (`activity("message")`). The SDK does this automatically — your job is just to register the handler at the right specificity level.
 
 ### ✅ Checkpoint 4
 - `/help` returns the command list.
