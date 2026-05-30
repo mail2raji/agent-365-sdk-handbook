@@ -13,7 +13,7 @@ A wrapped agent that has:
 1. A tenant **agent identity** (a real Entra app + service principal).
 2. A **blueprint** an admin can approve so every tenant user can chat with it.
 3. **OpenTelemetry traces** flowing into the **Agent 365 Control Panel**.
-4. Rows appearing in **Microsoft Defender XDR → Advanced Hunting** (`AgentActivity`).
+4. Rows appearing in **Microsoft Defender XDR → Advanced Hunting** (`CloudAppEvents`, filtered by your agent's app id).
 
 > 👶 Think of it like adopting a pet. The bare agent is the puppy. Agent 365 is the vet visit + microchip + name tag that lets the puppy walk around the office without anyone asking "who let this dog in?"
 
@@ -653,11 +653,26 @@ Confirm:
 
 Open <https://security.microsoft.com> → **Hunting → Advanced hunting**.
 
-Paste:
+> ℹ️ **Prerequisite.** In **Defender portal → Settings → Cloud apps → App connectors**, make sure the **Microsoft 365 activities** checkbox is on. Without it, `CloudAppEvents` is empty for every query. See [Connect Microsoft 365 to Defender for Cloud Apps](https://learn.microsoft.com/defender-cloud-apps/protect-office-365#prerequisites).
+
+Grab your agent's app id from `a365.generated.config.json` (`agentIdentity.appId`), then paste (and edit the GUID):
 
 ```kusto
-AgentActivity
-| where AgentDisplayName == "<your agent name>"
+// Source: https://learn.microsoft.com/microsoft-agent-365/developer/direct-open-telemetry-troubleshooting#verifying-ingestion
+let agentIdToFind = "<your-agent-app-id-guid>";
+CloudAppEvents
+| where Timestamp > ago(1d)
+| where ActionType in ("InvokeAgent", "InferenceCall",
+                       "ExecuteToolBySDK", "ExecuteToolByGateway", "ExecuteToolByMCPServer")
+| extend resData       = parse_json(tostring(RawEventData))
+| extend AgentId       = tostring(resData.AgentId)
+| extend TargetAgentId = tostring(resData.TargetAgentId)
+| extend AlternateId   = tostring(resData.PlatformTargetAgentId)
+| where AgentId == agentIdToFind
+     or TargetAgentId == agentIdToFind
+     or AlternateId == agentIdToFind
+| project Timestamp, ActionType, AccountDisplayName,
+          ConversationId = tostring(resData.ConversationId), resData
 | top 50 by Timestamp desc
 ```
 
@@ -667,7 +682,9 @@ Confirm:
 
 - [ ] Rows appear (within 5–15 min of the first message).
 
-**What just happened?** Agent 365 telemetry flows into Defender XDR's `AgentActivity` table, where security teams can hunt for unusual agent behaviour. This is the "compliance / security" view of your agent.
+**What just happened?** Agent 365 telemetry flows into Defender XDR's **`CloudAppEvents`** table (there is no separate `AgentActivity` table). Each row is one span — `ActionType` is the operation (`InvokeAgent`, `ExecuteToolBySDK`, …) and the per-span attributes live inside `RawEventData`. Security teams hunt here for unusual agent behaviour.
+
+> 💡 Only runs that emit an `invoke_agent` root span appear in Defender's *agent-activity views* and in the Microsoft 365 admin center. Other operations are still queryable from `CloudAppEvents` but are invisible to those higher-level surfaces.
 
 ### Step 9.4 — Write your own KQL
 
@@ -677,11 +694,16 @@ For practice, write a query that counts distinct users in the last 24h:
 <summary>Answer</summary>
 
 ```kusto
-AgentActivity
+let agentIdToFind = "<your-agent-app-id-guid>";
+CloudAppEvents
 | where Timestamp > ago(24h)
-| where AgentDisplayName == "<your agent name>"
-| summarize uniqueUsers = dcount(UserPrincipalName)
+| where ActionType == "InvokeAgent"
+| extend AgentId = tostring(parse_json(tostring(RawEventData)).AgentId)
+| where AgentId == agentIdToFind
+| summarize uniqueUsers = dcount(AccountObjectId)
 ```
+
+> 💧 `CloudAppEvents` has no `UserPrincipalName` column — use `AccountObjectId` (Entra GUID) or `AccountDisplayName` instead.
 
 </details>
 
@@ -733,7 +755,8 @@ Both cleanup commands succeed. No leftover resource group in Azure.
 | Bot in Teams stays silent | The Notification URL in Teams Developer Portal (Lab 6) is wrong/missing. | Re-check `messagingEndpoint` in `a365.generated.config.json` and re-save. |
 | `/healthz` returns 500 | The Web App can't start your Python. | Azure portal → Web App → **Log stream** to see the traceback. |
 | No traces in Control Panel | (1) `ENABLE_A365_OBSERVABILITY_EXPORTER=true`? (2) Redeployed? (3) `OtelWrite` app role on Agent Identity? | Check all three; the CLI prints the consent script if (3) is missing. |
-| Defender XDR `AgentActivity` empty | First-time ingestion lag. | Wait 5–15 min and retry. Confirm agent name spelling. |
+| Defender XDR `AgentActivity` not found / query fails | There is no `AgentActivity` table — Agent 365 telemetry lands in `CloudAppEvents`. | Use the canonical query in Step 9.3 (filters `CloudAppEvents` by your agent's app id inside `RawEventData`). |
+| Defender XDR `CloudAppEvents` empty | First-time ingestion lag, *or* the Microsoft 365 activities connector isn't on. | Wait 5–15 min and retry. Then verify **Defender portal → Settings → Cloud apps → App connectors → Microsoft 365 activities** is enabled. |
 | `cleanup` partially fails | One of the resources was already gone. | Re-run — both cleanup commands are idempotent. |
 
 ---

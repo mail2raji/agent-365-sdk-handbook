@@ -577,31 +577,49 @@ When it finishes, send another message in Teams (e.g. "test 1") so a new trace i
 
 ### 10.3 Microsoft Defender XDR
 
-Defender XDR ingests Agent 365 telemetry into its **Advanced Hunting** tables.
+Defender XDR ingests Agent 365 telemetry into the **`CloudAppEvents`** advanced-hunting table. The agent-specific fields are nested inside `RawEventData`, so the canonical lookup keys off your agent's **app id** (not a display name).
+
+> ℹ️ **Prerequisite.** Open **Defender portal → Settings → Cloud apps → App connectors** and make sure the **Microsoft 365 activities** checkbox is on. Otherwise `CloudAppEvents` is empty for every query. See [Connect Microsoft 365 to Defender for Cloud Apps](https://learn.microsoft.com/defender-cloud-apps/protect-office-365#prerequisites).
 
 1. Open <https://security.microsoft.com>.
 2. In the left nav: **Hunting → Advanced hunting**.
-3. Paste this KQL query:
+3. Grab your agent's app id from `a365.generated.config.json` (`agentIdentity.appId`).
+4. Paste this KQL query (replace the placeholder GUID):
 
    ```kusto
-   AgentActivity
-   | where AgentDisplayName == "My First A365 Agent"
+   // Source: https://learn.microsoft.com/microsoft-agent-365/developer/direct-open-telemetry-troubleshooting#verifying-ingestion
+   let agentIdToFind = "<your-agent-app-id-guid>";
+   CloudAppEvents
+   | where Timestamp > ago(1d)
+   | where ActionType in ("InvokeAgent", "InferenceCall",
+                          "ExecuteToolBySDK", "ExecuteToolByGateway", "ExecuteToolByMCPServer")
+   | extend resData       = parse_json(tostring(RawEventData))
+   | extend AgentId       = tostring(resData.AgentId)
+   | extend TargetAgentId = tostring(resData.TargetAgentId)
+   | extend AlternateId   = tostring(resData.PlatformTargetAgentId)
+   | where AgentId == agentIdToFind
+        or TargetAgentId == agentIdToFind
+        or AlternateId == agentIdToFind
+   | project Timestamp, ActionType, AccountDisplayName,
+             ConversationId = tostring(resData.ConversationId), resData
    | top 50 by Timestamp desc
    ```
 
-4. Click **Run query**.
-5. You should see rows for your turns: timestamp, conversation id, agent id, user upn, action.
+5. Click **Run query**.
+6. You should see rows for your turns: timestamp, action type (`InvokeAgent`, `ExecuteToolBySDK`, etc.), the calling user (`AccountDisplayName`), and the full per-span payload in `resData`.
 
-> 💡 If `AgentActivity` is empty, wait a few minutes and retry. Defender XDR ingestion can lag 5–15 minutes the first time.
+> 💡 If `CloudAppEvents` is empty, wait a few minutes and retry. First-time ingestion can lag **5–15 minutes** — and only runs that emit an `invoke_agent` root span show up in the agent-activity views (other operations are still queryable here).
 
 ### 10.4 Alerting (bonus)
 
-In Defender XDR, you can build **custom detection rules** from KQL — e.g. "alert me if any agent sends more than 100 messages in 10 minutes". Try:
+In Defender XDR, you can build **custom detection rules** from KQL — e.g. "alert me if any agent sends more than 100 invocations in 10 minutes". Try:
 
 ```kusto
-AgentActivity
+CloudAppEvents
 | where Timestamp > ago(10m)
-| summarize msgs=count() by AgentId
+| where ActionType == "InvokeAgent"
+| extend AgentId = tostring(parse_json(tostring(RawEventData)).AgentId)
+| summarize msgs = count() by AgentId
 | where msgs > 100
 ```
 
@@ -623,7 +641,7 @@ You have **wrapped** a bare M365 Agents SDK agent with the Agent 365 enterprise 
 - [ ] You can send a message in Teams and the bot replies.
 - [ ] Your agent appears in **M365 Admin Center → Agents**.
 - [ ] **Agent 365 Control Panel** shows at least one trace.
-- [ ] Defender XDR `AgentActivity` query returns rows.
+- [ ] Defender XDR `CloudAppEvents` query (filtered by your agent's app id) returns rows.
 
 ---
 
