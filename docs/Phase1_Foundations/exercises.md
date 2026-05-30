@@ -1,253 +1,493 @@
-# 🧩 Phase 1 — Exercises
+# 🧪 Phase 1 — Hands-On Lab: Build the Echo Agent
 
-## Exercise 1 — Activity types
-
-Name three values that can appear in `activity.type`.
-
-<details><summary>Answer</summary>
-
-Common types: `message`, `conversationUpdate`, `event`, `invoke`, `typing`, `messageReaction`, `endOfConversation`.
-For this curriculum the three most important are **`message`**, **`conversationUpdate`**, **`event`**.
-
-</details>
+> A step-by-step lab. Follow each instruction in order. Don't skip steps. By the end, your computer will be a chat-bot that talks back.
 
 ---
 
-## Exercise 2 — Decorator vocab
+## 🎯 What you'll build today
 
-What decorator would you use to catch only the exact text **"reset"**?
+Two tiny agents you can actually chat with:
 
-<details><summary>Answer</summary>
+1. **`echo_agent`** — echoes whatever you type back to you. *(Lab 1–3)*
+2. **`echo_plus`** — same agent, but with a greeting, a `/help` command, and a `clear` command. *(Lab 4)*
 
-```python
-@AGENT_APP.message("reset")
-async def on_reset(context, state):
-    await context.send_activity("State reset.")
+You'll also learn to:
+
+- Read the JSON of an activity (so you can debug when things go wrong).
+- Send the agent a fake message from PowerShell — no Teams needed.
+
+> 👶 Think of it like making a parrot. First we build a parrot that just repeats you (`echo_agent`). Then we teach the parrot three magic words (`echo_plus`). All in your terminal.
+
+⏱️ **About 60–75 minutes** if you take your time.
+
+---
+
+## ✅ Before you start (checklist)
+
+- [ ] Phase 0 finished — running `python hello_sdk.py` in the Phase 0 folder prints "All SDK imports OK".
+- [ ] Your terminal prompt starts with **`(.venv)`**. If not, run `.\.venv\Scripts\Activate.ps1` from the curriculum root.
+- [ ] VS Code is open at `Agent365_SDK_Learning/`.
+
+---
+
+## 🗺️ Today's roadmap
+
+```
+Lab 1 → Open the prebuilt echo_agent and understand the 6 imports
+Lab 2 → Run the agent locally
+Lab 3 → Send it a message from PowerShell (no UI needed)
+Lab 4 → Copy & extend it into echo_plus
+Lab 5 → (Optional) Inspect activity JSON
 ```
 
-</details>
+---
+
+## Lab 1 — Open the echo_agent and decode every line (~15 min)
+
+**You will:** open the file that ships with this phase and we'll walk through every block.
+
+### Step 1.1 — Move to the Phase 1 folder
+
+In the terminal:
+
+```powershell
+cd Phase1_Foundations\code\echo_agent
+```
+
+> Already inside another phase folder? Type `cd ..\..\..\Phase1_Foundations\code\echo_agent` instead.
+
+Check what's inside:
+
+```powershell
+Get-ChildItem
+```
+
+You should see at least:
+
+```text
+app.py
+start_server.py
+.env.example
+```
+
+### Step 1.2 — Open `app.py`
+
+```powershell
+code app.py
+```
+
+Your file should look exactly like this (if not, that's OK — just keep reading):
+
+```python
+from microsoft_agents.hosting.core import (
+    AgentApplication, MemoryStorage, TurnContext, TurnState,
+)
+from start_server import start_server
+
+AGENT_APP = AgentApplication(storage=MemoryStorage())
+
+@AGENT_APP.conversation_update("membersAdded")
+async def on_join(context: TurnContext, state: TurnState):
+    for m in context.activity.members_added or []:
+        if m.id != context.activity.recipient.id:
+            await context.send_activity("👋 Hi! I'm an echo bot. Type anything.")
+
+@AGENT_APP.activity("message")
+async def on_message(context: TurnContext, state: TurnState):
+    await context.send_activity(f"You said: {context.activity.text}")
+
+if __name__ == "__main__":
+    start_server(AGENT_APP, None)
+```
+
+### Step 1.3 — Decode it block by block
+
+| Lines | What they do | Plain English |
+|---|---|---|
+| `from microsoft_agents.hosting.core import …` | Pulls 4 classes from the SDK. | "Bring me these 4 tools from the cupboard." |
+| `from start_server import start_server` | Pulls in the tiny web server (file lives next to `app.py`). | "Bring me the front door." |
+| `AGENT_APP = AgentApplication(…)` | Creates the **brain**. | "Make me an empty agent that uses RAM for memory." |
+| `@AGENT_APP.conversation_update("membersAdded")` | Registers a handler that fires when a new user joins. | "When someone walks in, say hi." |
+| `@AGENT_APP.activity("message")` | Registers a handler that fires for every text message. | "When someone types, echo it back." |
+| `start_server(AGENT_APP, None)` | Boots the web server on port 3978. | "Open the front door." |
+
+> 🧠 The `@…` lines are called **decorators**. Read them as: "the next function is a handler — please call it when *this* happens."
+
+### ✅ Checkpoint 1
+You can point to (a) the brain (`AgentApplication`), (b) the welcome handler, (c) the message handler, and (d) the line that starts the server.
 
 ---
 
-## Exercise 3 — Decorator vocab 2
+## Lab 2 — Run the agent (~5 min)
 
-What decorator catches **any** message, regardless of text?
+**You will:** start the agent and confirm it's listening on port 3978.
 
-<details><summary>Answer</summary>
+### Step 2.1 — Run it
+
+Still in `Phase1_Foundations\code\echo_agent`:
+
+```powershell
+python app.py
+```
+
+**Expected output (give it 1–2 seconds):**
+
+```text
+======== Running on http://localhost:3978 ========
+(Press CTRL+C to quit)
+```
+
+If you see this — congratulations, your computer is now a chat server.
+
+### Step 2.2 — Confirm the front door is open
+
+Open a **second terminal** (`Ctrl+Shift+\``). In the new terminal:
+
+```powershell
+Test-NetConnection localhost -Port 3978
+```
+
+You want to see `TcpTestSucceeded : True`.
+
+On macOS/Linux instead:
+
+```bash
+nc -zv localhost 3978
+```
+
+### ✅ Checkpoint 2
+Terminal 1 shows `Running on http://localhost:3978`. Terminal 2 confirms port 3978 is open.
+
+> ❗ Keep terminal 1 running. You'll send messages to it from terminal 2 in the next lab. If you accidentally pressed `Ctrl+C`, just re-run `python app.py`.
+
+---
+
+## Lab 3 — Talk to the agent from PowerShell (~10 min)
+
+**You will:** send the agent a fake chat message using `Invoke-RestMethod`. No Teams, no browser — just text.
+
+### Step 3.1 — Why are we doing this?
+
+The agent's "front door" is the URL `http://localhost:3978/api/messages`. In production, **Teams** or **Web Chat** sends JSON-formatted activity objects to that URL. We can pretend to be Teams by sending our own JSON with PowerShell.
+
+### Step 3.2 — Build the fake message
+
+In **terminal 2**, paste this **all at once**:
+
+```powershell
+$body = @{
+    type         = "message"
+    text         = "hello agent"
+    from         = @{ id = "user-1"; name = "Lab User" }
+    recipient    = @{ id = "bot"; name = "Echo Bot" }
+    conversation = @{ id = "chat-1" }
+    serviceUrl   = "http://localhost"
+    channelId    = "emulator"
+} | ConvertTo-Json -Depth 5
+
+Invoke-RestMethod -Uri http://localhost:3978/api/messages `
+    -Method POST `
+    -ContentType "application/json" `
+    -Body $body
+```
+
+Press Enter.
+
+**Expected output in terminal 2:** *(nothing visible — `Invoke-RestMethod` returns silently when the server replies 200 OK)*
+
+**Expected output in terminal 1:** a log line per request, no errors.
+
+### Step 3.3 — Where did the echo go?
+
+The reply is in the HTTP response (look at terminal 1 logs), but for a quick sanity check let's intercept it.
+
+Stop the agent in terminal 1 (`Ctrl+C`). Open `app.py` and add **one print line** so we see the message arriving:
 
 ```python
 @AGENT_APP.activity("message")
-async def on_any_message(context, state):
-    ...
+async def on_message(context: TurnContext, state: TurnState):
+    print(f"[RECEIVED] {context.activity.text}")        # ← add this
+    await context.send_activity(f"You said: {context.activity.text}")
 ```
 
-</details>
+Save (`Ctrl+S`). Re-run:
+
+```powershell
+python app.py
+```
+
+Now in terminal 2, send the message again:
+
+```powershell
+Invoke-RestMethod -Uri http://localhost:3978/api/messages `
+    -Method POST -ContentType "application/json" -Body $body
+```
+
+In terminal 1 you should see:
+
+```text
+[RECEIVED] hello agent
+```
+
+### ✅ Checkpoint 3
+Terminal 1 prints `[RECEIVED] hello agent` whenever you send a message from terminal 2.
+
+> 🧠 Why `[RECEIVED]` and not `You said:`? The `You said:` text is sent as a *response* back to the channel — it never goes to stdout. The `print(...)` line we added is the one that hits the console.
 
 ---
 
-## Exercise 4 — Order matters
+## Lab 4 — Build `echo_plus` from scratch (~20 min)
 
-In `app.py` you have:
+**You will:** copy `echo_agent` into a new folder called `echo_plus` and add three commands:
+
+| Command the user types | What the agent does |
+|---|---|
+| `/help` | Lists the commands |
+| `clear` | Tells the user "Nothing to clear yet — Phase 3 will fix that 😉" |
+| anything else | Echoes back with a counter: `[#3] You said: …` |
+
+### Step 4.1 — Copy the folder
+
+Stop the running agent (terminal 1: `Ctrl+C`). Then:
+
+```powershell
+cd ..
+Copy-Item -Recurse echo_agent echo_plus
+cd echo_plus
+code app.py
+```
+
+### Step 4.2 — Replace `app.py` with this
+
+Select everything in `app.py` (`Ctrl+A`) and paste this:
 
 ```python
-@AGENT_APP.activity("message")
-async def catch_all(...): ...
+"""echo_plus — Phase 1 lab: an echo agent with /help and a counter."""
+from microsoft_agents.hosting.core import (
+    AgentApplication, MemoryStorage, TurnContext, TurnState,
+)
+from start_server import start_server
 
+AGENT_APP = AgentApplication(storage=MemoryStorage())
+
+# We use a plain module-level counter for now. Phase 3 teaches us the
+# *correct* way (state). For one user on localhost this is fine.
+_count = 0
+
+HELP_TEXT = (
+    "Commands I understand:\n"
+    "  /help   – show this list\n"
+    "  clear   – (placeholder) reset memory\n"
+    "  <text>  – I'll echo it back with a counter"
+)
+
+
+@AGENT_APP.conversation_update("membersAdded")
+async def on_join(context: TurnContext, state: TurnState):
+    for m in context.activity.members_added or []:
+        if m.id != context.activity.recipient.id:
+            await context.send_activity(
+                "👋 Hi! I'm echo_plus.\n" + HELP_TEXT
+            )
+
+
+# Handler #1 — exact-text match "/help"
 @AGENT_APP.message("/help")
-async def on_help(...): ...
+async def on_help(context: TurnContext, state: TurnState):
+    await context.send_activity(HELP_TEXT)
+
+
+# Handler #2 — exact-text match "clear"
+@AGENT_APP.message("clear")
+async def on_clear(context: TurnContext, state: TurnState):
+    await context.send_activity(
+        "🧹 Nothing to clear yet — Phase 3 will fix that 😉"
+    )
+
+
+# Handler #3 — catch-all for any other text
+@AGENT_APP.activity("message")
+async def on_message(context: TurnContext, state: TurnState):
+    global _count
+    _count += 1
+    print(f"[#{_count}] received: {context.activity.text}")
+    await context.send_activity(f"[#{_count}] You said: {context.activity.text}")
+
+
+if __name__ == "__main__":
+    start_server(AGENT_APP, None)
 ```
 
-A user types `/help`. What's printed by `on_help`?
+Save (`Ctrl+S`).
 
-<details><summary>Answer</summary>
+### Step 4.3 — Decode the new pieces
 
-Nothing — `catch_all` is registered first and a broader route swallows the message before `on_help` gets a chance. **Put specific routes first.**
+- `@AGENT_APP.message("/help")` is a **specialised** decorator. It only fires when the **entire** message text equals `/help`. It runs *before* the catch-all because the SDK matches more specific handlers first.
+- `_count` is a **global** Python variable — terrible for production (every user shares it!), but fine to see the difference between *no state* (here) and *real state* (Phase 3).
 
-</details>
+### Step 4.4 — Run & test
+
+```powershell
+python app.py
+```
+
+In terminal 2, send three messages with these `$body` values. Just replace the `text = …` line in the snippet and re-run `Invoke-RestMethod` for each:
+
+```powershell
+# Message 1
+$body = @{ type="message"; text="/help"; from=@{id="u1"}; recipient=@{id="b"}; conversation=@{id="c1"}; serviceUrl="http://localhost" } | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Uri http://localhost:3978/api/messages -Method POST -ContentType "application/json" -Body $body
+
+# Message 2
+$body = @{ type="message"; text="hello"; from=@{id="u1"}; recipient=@{id="b"}; conversation=@{id="c1"}; serviceUrl="http://localhost" } | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Uri http://localhost:3978/api/messages -Method POST -ContentType "application/json" -Body $body
+
+# Message 3
+$body = @{ type="message"; text="clear"; from=@{id="u1"}; recipient=@{id="b"}; conversation=@{id="c1"}; serviceUrl="http://localhost" } | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Uri http://localhost:3978/api/messages -Method POST -ContentType "application/json" -Body $body
+```
+
+**In terminal 1 you should see:**
+
+```text
+[#1] received: hello
+```
+
+(Note: `/help` and `clear` don't increment the counter because they are caught by their own specific handlers and `return` before the catch-all.)
+
+### ✅ Checkpoint 4
+- `/help` returns the command list.
+- `clear` returns the placeholder line.
+- Any other text returns an echo with `[#1]`, `[#2]`, … incrementing.
 
 ---
 
-## Exercise 5 — Reply with multiple messages
+## Lab 5 — (Optional) Inspect the JSON of a real activity (~10 min)
 
-Modify `on_help` to send **two** consecutive messages.
+**You will:** print the full incoming activity to see all 25+ fields the channel sends.
 
-<details><summary>Answer</summary>
+### Step 5.1 — Add an inspector
 
-```python
-@AGENT_APP.message("/help")
-async def on_help(context, state):
-    await context.send_activity("Here's the help:")
-    await context.send_activity("Type anything and I'll echo it.")
-```
-
-</details>
-
----
-
-## Exercise 6 — Read the user's name
-
-Inside a message handler, how do you get the **sender's display name**?
-
-<details><summary>Answer</summary>
-
-```python
-name = context.activity.from_property.name
-```
-
-(`from` is a Python reserved word, so the property is renamed to `from_property`.)
-
-</details>
-
----
-
-## Exercise 7 — Conversation ID
-
-Where can you find the unique ID of the current conversation?
-
-<details><summary>Answer</summary>
-
-```python
-conv_id = context.activity.conversation.id
-```
-
-</details>
-
----
-
-## Exercise 8 — Catch a different activity type
-
-Add a handler that runs when the channel reports the user is typing.
-
-<details><summary>Answer</summary>
-
-```python
-@AGENT_APP.activity("typing")
-async def on_typing(context, state):
-    # Most channels send typing indicators — silently log them
-    print(f"User {context.activity.from_property.id} is typing…")
-```
-
-</details>
-
----
-
-## Exercise 9 — Echo only the last 50 chars
-
-Limit the echo to the last 50 characters of the incoming message.
-
-<details><summary>Answer</summary>
+In `echo_plus/app.py`, replace the catch-all `on_message` with:
 
 ```python
 @AGENT_APP.activity("message")
-async def on_any_message(context, state):
-    text = (context.activity.text or "")[-50:]
-    await context.send_activity(f"Echo: {text}")
+async def on_message(context: TurnContext, state: TurnState):
+    global _count
+    _count += 1
+    # 👇 Dump the full activity for inspection
+    print("---- INCOMING ACTIVITY ----")
+    print(context.activity.model_dump_json(indent=2))
+    print("---------------------------")
+    await context.send_activity(f"[#{_count}] You said: {context.activity.text}")
 ```
 
-</details>
+Save. Restart (`Ctrl+C` then `python app.py`).
 
----
+Send any message from terminal 2:
 
-## Exercise 10 — Regex matching
-
-Match any message that **starts with** `order ` followed by digits, e.g. `order 12345`.
-
-<details><summary>Answer</summary>
-
-```python
-import re
-
-@AGENT_APP.message(re.compile(r"^order\s+\d+$", re.IGNORECASE))
-async def on_order(context, state):
-    await context.send_activity("Looking up your order…")
+```powershell
+$body = @{ type="message"; text="show me everything"; from=@{id="u1"; name="Alice"}; recipient=@{id="b"}; conversation=@{id="c1"}; serviceUrl="http://localhost"; channelId="emulator"; locale="en-US" } | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Uri http://localhost:3978/api/messages -Method POST -ContentType "application/json" -Body $body
 ```
 
-</details>
+In terminal 1 you'll see ~30 lines of JSON like:
 
----
-
-## Exercise 11 — Why `async`?
-
-Why must every handler be `async def` and not `def`?
-
-<details><summary>Answer</summary>
-
-The SDK and the underlying `aiohttp` server are **asynchronous** — they use `asyncio` to handle many requests concurrently without threads. A blocking `def` handler would freeze the whole event loop.
-
-</details>
-
----
-
-## Exercise 12 — `send_activity` shortcuts
-
-What's the difference between:
-
-```python
-await context.send_activity("Hi")
-await context.send_activity(Activity(type="message", text="Hi"))
+```json
+{
+  "type": "message",
+  "id": null,
+  "timestamp": "2025-...",
+  "text": "show me everything",
+  "from": { "id": "u1", "name": "Alice" },
+  "recipient": { "id": "b" },
+  "conversation": { "id": "c1" },
+  "channel_id": "emulator",
+  "service_url": "http://localhost",
+  "locale": "en-US",
+  ...
+}
 ```
 
-<details><summary>Answer</summary>
+**Why is this useful?** When something breaks in production (e.g. "Teams sent something weird"), copy that JSON into a comment and you can replay it with `Invoke-RestMethod`.
 
-They're equivalent. Passing a string is a shortcut — the SDK wraps it in `Activity(type="message", text=...)` automatically.
-
-</details>
-
----
-
-## Exercise 13 — Where does the port come from?
-
-In `start_server.py` we used:
-
-```python
-port = int(os.environ.get("PORT", 3978))
-```
-
-What does this expression do?
-
-<details><summary>Answer</summary>
-
-It reads the environment variable `PORT`. If unset, defaults to `3978`. `int(...)` converts the string to an integer. This lets Azure App Service inject `PORT` at runtime in Phase 9.
-
-</details>
+### ✅ Checkpoint 5
+You can see the full activity JSON in terminal 1.
 
 ---
 
-## Exercise 14 — Bonus: Build a "rude" agent
+## 🆘 If something goes wrong
 
-Make an agent that **rejects** any message containing the word "please" (politely 😄).
-
-<details><summary>Answer</summary>
-
-```python
-@AGENT_APP.activity("message")
-async def on_message(context, state):
-    text = (context.activity.text or "").lower()
-    if "please" in text:
-        await context.send_activity("Ugh, manners. I'll ignore that.")
-        return
-    await context.send_activity(f"Echo: {context.activity.text}")
-```
-
-</details>
+| What you see | What it really means | How to fix |
+|---|---|---|
+| `Address already in use` on port 3978 | An older agent is still running. | Close the other terminal, or change port: edit `start_server.py` and look for `3978`. |
+| `ModuleNotFoundError: microsoft_agents` | venv not active. | `.\.venv\Scripts\Activate.ps1` from the curriculum root, then run again. |
+| `Invoke-RestMethod : The remote name could not be resolved` | You typed `localhost` wrong, or the server isn't running. | Check terminal 1 still says `Running on http://localhost:3978`. |
+| `Invoke-RestMethod : 401 Unauthorized` | Auth is on but no token sent. | Set `ANONYMOUS_ALLOWED=true` in `.env`, then restart the agent (this is fine for local dev). |
+| `Invoke-RestMethod : 415 Unsupported Media Type` | Forgot `-ContentType "application/json"`. | Add it. |
+| Handler fires for the *wrong* message | Decorator ordering or wrong match type. | Exact-text `.message("foo")` beats catch-all `.activity("message")`. Regex needs `re.compile(...)`. |
+| Nothing happens when you `python app.py` | The file has a typo and crashed silently — but you can't see it because there's no traceback. | Run `python -c "import app"` to see the import error. |
 
 ---
 
-## Exercise 15 — Bonus: Read the channel
+## 🎓 Self-check
 
-Echo back **which channel** sent the message (`msteams`, `webchat`, `emulator`, …).
+1. **What is the difference between `@AGENT_APP.activity("message")` and `@AGENT_APP.message("hello")`?**
 
-<details><summary>Answer</summary>
+   <details><summary>Show answer</summary>
+   The first runs for **every** message activity (catch-all). The second runs **only** when the message text is exactly `hello`. The SDK tries the more specific match first.
+   </details>
 
-```python
-@AGENT_APP.activity("message")
-async def on_message(context, state):
-    ch = context.activity.channel_id
-    await context.send_activity(f"You messaged me from {ch}. You said: {context.activity.text}")
-```
+2. **What does `MemoryStorage()` mean for our counter `_count`?**
 
-</details>
+   <details><summary>Show answer</summary>
+   `MemoryStorage` keeps SDK state in RAM. But our `_count` isn't even using SDK state — it's a plain Python global. Both die the moment you stop the process. Phase 3 introduces real persistence.
+   </details>
+
+3. **In `on_join`, why do we check `m.id != context.activity.recipient.id`?**
+
+   <details><summary>Show answer</summary>
+   The `membersAdded` event fires for **everyone** added to the conversation — including the **bot itself**. Without that check the bot would greet itself the moment it joins a room.
+   </details>
+
+4. **Why does `clear` not increment the counter?**
+
+   <details><summary>Show answer</summary>
+   `@AGENT_APP.message("clear")` matches first and its handler `return`s without falling through to the catch-all. Specific beats general.
+   </details>
+
+5. **Name 3 fields you saw inside the incoming activity JSON.**
+
+   <details><summary>Show answer</summary>
+   Any 3 of: `type`, `text`, `from`, `recipient`, `conversation`, `channel_id`, `service_url`, `locale`, `timestamp`, …
+   </details>
 
 ---
 
-✅ Next → **[Phase 2 — Activities & Handlers](../Phase2_Activities_and_Handlers/README.md)**.
+## 🚀 Bonus tasks
+
+1. **Make the agent SHOUT** — wrap the echo in `.upper()` so `hello` comes back as `YOU SAID: HELLO`.
+2. **Add a `time` command** that replies with the current time (`from datetime import datetime`).
+3. **Add a regex handler** that catches anything starting with `weather` — for now reply "Weather in Phase 6 — coming soon".
+
+   ```python
+   import re
+   @AGENT_APP.message(re.compile(r"^weather", re.IGNORECASE))
+   async def stub(context, state):
+       await context.send_activity("Weather in Phase 6 — coming soon 🌦️")
+   ```
+
+4. **Save 5 different test messages** as a PowerShell script `tests.ps1` so you can replay your scenario with one keypress.
+
+---
+
+## 🏁 You're done!
+
+You now know:
+
+- How to start an agent on port 3978.
+- How to write three different kinds of handlers (`conversation_update`, exact-text `message`, catch-all `activity`).
+- How to send a fake activity from PowerShell (priceless for debugging).
+- How to inspect the full activity JSON.
+
+Next → [Phase 2 — Activities & Handlers (build an FAQ Agent)](../Phase2_Activities_and_Handlers/README.md)
